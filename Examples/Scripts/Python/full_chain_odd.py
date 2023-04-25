@@ -34,8 +34,8 @@ parser.add_argument(
     "--geant4", help="Use Geant4 instead of fatras", action="store_true"
 )
 parser.add_argument(
-    "--ttbar",
-    help="Use Pythia8 (ttbar, pile-up 200) instead of particle gun",
+    "--Pythia8",
+    help="Use Pythia8 (without pile-up) instead of particle gun",
     action="store_true",
 )
 parser.add_argument(
@@ -46,7 +46,7 @@ parser.add_argument(
 
 args = vars(parser.parse_args())
 
-ttbar_pu200 = args["ttbar"]
+pythia8 = args["Pythia8"]
 g4_simulation = args["geant4"]
 ambiguity_MLSolver = args["MLSolver"]
 u = acts.UnitConstants
@@ -73,7 +73,7 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
         outputDir=str(outputDir),
     )
 
-    if not ttbar_pu200:
+    if not pythia8:
         addParticleGun(
             s,
             MomentumConfig(1.0 * u.GeV, 10.0 * u.GeV, transverse=True),
@@ -91,8 +91,9 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
     else:
         addPythia8(
             s,
-            hardProcess=["Top:qqbar2ttbar=on"],
-            npileup=200,
+            # hardProcess=["Top:qqbarqttbar=on"],
+            hardProcess=["50:new = N2 N2 2 0 0 15.0 0.0 0.0 0.0 100.0 0 1 0 1 0" ,"50:isResonance = false" ,"50:addChannel = 1 0.50 23 -13  13 -14" ,"50:addChannel = 1 0.50 23  13 -13 14" ,"50:mayDecay = on" ,"WeakSingleBoson:ffbar2W = on", "24:onMode = off"	 ,"24:addchannel = 1 1.0 103 -13 50" ,"ParticleDecays:limitTau0 = off" ,"ParticleDecays:tau0Max = 600.0"],
+            npileup=0,
             vtxGen=acts.examples.GaussianVertexGenerator(
                 stddev=acts.Vector4(
                     0.0125 * u.mm, 0.0125 * u.mm, 55.5 * u.mm, 5.0 * u.ns
@@ -100,8 +101,8 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
                 mean=acts.Vector4(0, 0, 0, 0),
             ),
             rnd=rnd,
-            outputDirRoot=outputDir,
-            # outputDirCsv=outputDir,
+            # outputDirRoot=outputDir,
+            outputDirCsv=outputDir,
         )
     if g4_simulation:
         if s.config.numThreads != 1:
@@ -136,10 +137,10 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
                 pt=(150 * u.MeV, None),
                 removeNeutral=True,
             )
-            if ttbar_pu200
+            if pythia8
             else ParticleSelectorConfig(),
-            outputDirRoot=outputDir,
-            # outputDirCsv=outputDir,
+            # outputDirRoot=outputDir,
+            outputDirCsv=outputDir,
             rnd=rnd,
         )
 
@@ -149,7 +150,7 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
         field,
         digiConfigFile=oddDigiConfig,
         outputDirRoot=outputDir,
-        # outputDirCsv=outputDir,
+        outputDirCsv=outputDir,
         rnd=rnd,
     )
 
@@ -158,7 +159,7 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
         trackingGeometry,
         field,
         TruthSeedRanges(pt=(1.0 * u.GeV, None), eta=(-3.0, 3.0), nHits=(9, None))
-        if ttbar_pu200
+        if pythia8
         else TruthSeedRanges(),
         geoSelectionConfigFile=oddSeedingSel,
         outputDirRoot=outputDir,
@@ -169,7 +170,7 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
         trackingGeometry,
         field,
         CKFPerformanceConfig(
-            ptMin=1.0 * u.GeV if ttbar_pu200 else 0.0,
+            ptMin=1.0 * u.GeV if pythia8 else 0.0,
             nMeasurementsMin=7,
         ),
         TrackSelectorRanges(
@@ -177,8 +178,8 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
             absEta=(None, 3.0),
             loc0=(-4.0 * u.mm, 4.0 * u.mm),
         ),
-        outputDirRoot=outputDir,
-        # outputDirCsv=outputDir,
+        # outputDirRoot=outputDir,
+        outputDirCsv=outputDir,
     )
 
     if ambiguity_MLSolver:
@@ -186,7 +187,7 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
             s,
             AmbiguityResolutionMLConfig(nMeasurementsMin=7),
             CKFPerformanceConfig(
-                ptMin=1.0 * u.GeV if ttbar_pu200 else 0.0, nMeasurementsMin=7
+                ptMin=1.0 * u.GeV if pythia8 else 0.0, nMeasurementsMin=7
             ),
             outputDirRoot=outputDir,
             # outputDirCsv=outputDir,
@@ -196,11 +197,9 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
     else:
         addAmbiguityResolution(
             s,
-            AmbiguityResolutionConfig(
-                maximumSharedHits=3, maximumIterations=10000, nMeasurementsMin=7
-            ),
+            AmbiguityResolutionConfig(maximumSharedHits=3, nMeasurementsMin=7),
             CKFPerformanceConfig(
-                ptMin=1.0 * u.GeV if ttbar_pu200 else 0.0,
+                ptMin=1.0 * u.GeV if pythia8 else 0.0,
                 nMeasurementsMin=7,
             ),
             outputDirRoot=outputDir,
@@ -215,3 +214,4 @@ with acts.FpeMonitor() if not g4_simulation else contextlib.nullcontext():
     )
 
     s.run()
+
